@@ -1,0 +1,16 @@
+*.pyc
+*~
+**.sw*
+*.zip
+.*.sw*
+*.DS_Store
+*media*
+*.*.sw*
+.DS_Store
+.idea
+
+# Ignore the virtual environment
+venv
+
+# Ignore the .env file
+.env
