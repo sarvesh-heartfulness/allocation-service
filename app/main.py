@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import endpoints
+from api import router, dorm_router
 
 app = FastAPI()
 
@@ -16,4 +16,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(endpoints.router)
+app.include_router(router)
+app.include_router(dorm_router, prefix='/dorms')
