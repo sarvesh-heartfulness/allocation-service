@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
+from fastapi.security import APIKeyHeader
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import desc
 import uuid
 
 from schema import DormPydanticRead, DormPydanticWrite, DormPydanticUpdate
 from models import Dorm
 from config.db import get_db
+from deps import is_authenticated
 
 router = APIRouter()
+authorization_token = APIKeyHeader(name='Authorization', scheme_name='Authorization')
+x_client_id = APIKeyHeader(name='X-Client-Id', scheme_name='X-Client-Id')
 
 # Should add a helper method that returns all necessary information
 @router.get("/", response_model=List[DormPydanticRead], status_code=status.HTTP_200_OK)
@@ -16,7 +20,10 @@ def list_dorms(
     db: Session = Depends(get_db),
     limit: int = 20,
     skip: int = 0,
-    active: Optional[bool] = Query(None),):
+    active: Optional[bool] = Query(None),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     List all the dorms
     '''
@@ -33,7 +40,10 @@ def list_dorms(
 @router.get("/{dorm_id}/", response_model=DormPydanticRead, status_code=status.HTTP_200_OK)
 def read_dorm(
     dorm_id: uuid.UUID,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     Get a dorm by id
     '''
@@ -45,7 +55,10 @@ def read_dorm(
 @router.post("/", response_model=DormPydanticRead, status_code=status.HTTP_201_CREATED)
 def create_dorm(
     dorm: DormPydanticWrite,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     Create a new dorm
     '''
@@ -63,7 +76,10 @@ def create_dorm(
 def update_dorm(
     dorm_id: uuid.UUID,
     dorm: DormPydanticUpdate,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     Update a dorm
     '''

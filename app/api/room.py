@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
+from fastapi.security import APIKeyHeader
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -7,8 +8,11 @@ import uuid
 from schema import RoomCreate, RoomResponse, DormPydanticRead
 from models import Dorm, Room
 from config.db import get_db
+from deps import is_authenticated
 
 router = APIRouter()
+authorization_token = APIKeyHeader(name='Authorization', scheme_name='Authorization')
+x_client_id = APIKeyHeader(name='X-Client-Id', scheme_name='X-Client-Id')
 
 @router.get("/", response_model=List[RoomResponse], status_code=status.HTTP_200_OK)
 def list_rooms_for_a_dorm(
@@ -16,7 +20,10 @@ def list_rooms_for_a_dorm(
     db: Session = Depends(get_db),
     limit: int = 20,
     skip: int = 0,
-    active: Optional[bool] = Query(None),):
+    active: Optional[bool] = Query(None),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     List all the rooms for a dorm
     '''
@@ -40,7 +47,10 @@ def list_rooms_for_a_dorm(
 def read_room(
     dorm_id: str,
     room_id: str,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     Get a room by id
     '''
@@ -59,7 +69,10 @@ def read_room(
 def create_room(
     dorm_id: uuid.UUID,
     room: RoomCreate,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     Create new room for a dorm
     '''
@@ -89,7 +102,10 @@ def update_room(
     dorm_id: uuid.UUID,
     room_id: uuid.UUID,
     room: RoomCreate,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     Update a room
     '''
