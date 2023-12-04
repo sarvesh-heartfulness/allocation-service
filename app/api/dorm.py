@@ -8,7 +8,7 @@ from schema import DormPydanticRead, DormPydanticWrite, DormPydanticUpdate
 from models import Dorm
 from config.db import get_db
 
-router = APIRouter(tags=["dorms"])
+router = APIRouter()
 
 # Should add a helper method that returns all necessary information
 @router.get("/", response_model=List[DormPydanticRead], status_code=status.HTTP_200_OK)

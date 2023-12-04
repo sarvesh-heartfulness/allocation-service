@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic._internal._model_construction import ModelMetaclass
 from models import Dorm, Room, Bed
 import uuid
@@ -54,3 +54,40 @@ class DormPydanticUpdate(DormPydanticWrite, metaclass=AllOptional):
 
 # class BedPydantic(BedBase, BasePydantic):
 #     pass
+
+class ReadOnly(BaseModel):
+    class Config:
+        allow_mutation = False
+
+class RoomCreate(BaseModel):
+    name: str = Field(..., title="Room Name", description="Name of the room")
+    room_identifier: int = Field(..., title="Room Identifier", description="Room identifier")
+    ac_available: bool = Field(False, title="AC Available", description="AC Available")
+    floor: Room.FLOORS = Field(..., title="Floor", description="Floor")
+    close_to_dorm_entrance: bool = Field(False, title="Close to Dorm Entrance", description="Close to Dorm Entrance")
+    close_to_bath: bool = Field(False, title="Close to Bath", description="Close to Bath")
+    percent_released: int = Field(None, title="Percent Released", description="Percent Released")
+    bed_type: Room.BED_TYPES = Field(..., title="Bed Type", description="Bed Type")
+    is_multibatch: bool = Field(False, title="Is Multibatch", description="Is Multibatch")
+    max_count: int = Field(0, title="Max Count", description="Max Count")
+    participant_type: Room.PARTICIPANT_TYPES = Field(..., title="Participant Type", description="Participant Type")
+    reset_allowed: bool = Field(False, title="Reset Allowed", description="Reset Allowed")
+    active: bool = Field(True, title="Active", description="Active")
+
+class RoomResponse(ReadOnly):
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    name: str
+    room_identifier: int
+    ac_available: bool
+    floor: Room.FLOORS
+    close_to_dorm_entrance: bool
+    close_to_bath: bool
+    percent_released: int
+    bed_type: Room.BED_TYPES
+    is_multibatch: bool
+    max_count: int
+    participant_type: Room.PARTICIPANT_TYPES
+    reset_allowed: bool
+    active: bool

@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 from config.db import check_db_connection
 from api.dorm import router as dorm_router
+from api.room import router as room_router
 
 router = APIRouter()
 load_dotenv()
