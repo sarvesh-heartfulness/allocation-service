@@ -3,7 +3,7 @@ from pydantic._internal._model_construction import ModelMetaclass
 from models import Dorm, Room, Bed
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 class BasePydantic(BaseModel):
     class Config:
@@ -43,6 +43,10 @@ class DormPydanticWrite(BasePydantic):
 class DormPydanticUpdate(DormPydanticWrite, metaclass=AllOptional):
     pass
 
+class PaginatedDormResponse(BaseModel):
+    count: int
+    results: List[DormPydanticRead]
+
 # class RoomBase(RoomPydanticBase):
 #     pass
 
@@ -78,6 +82,7 @@ class RoomResponse(ReadOnly):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    dorm_id: uuid.UUID
     name: str
     room_identifier: int
     ac_available: bool
@@ -91,3 +96,35 @@ class RoomResponse(ReadOnly):
     participant_type: Room.PARTICIPANT_TYPES
     reset_allowed: bool
     active: bool
+
+class PaginatedRoomResponse(BaseModel):
+    count: int
+    results: List[RoomResponse]
+
+class BedCreate(BaseModel):
+    name: str = Field(..., title="Bed Name", description="Name of the bed")
+    number: int = Field(..., title="Number", description="Number")
+    blocked: bool = Field(False, title="Blocked", description="Blocked")
+    level: Bed.LEVELS = Field(..., title="Level", description="Level")
+    close_to_dorm_entrance: bool = Field(False, title="Close to Dorm Entrance", description="Close to Dorm Entrance")
+    close_to_bath: bool = Field(False, title="Close to Bath", description="Close to Bath")
+    allocated: bool = Field(False, title="Allocated", description="Allocated")
+    active: bool = Field(True, title="Active", description="Active")
+
+class BedResponse(ReadOnly):
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    room_id: uuid.UUID
+    name: str
+    number: int
+    blocked: bool
+    level: Bed.LEVELS
+    close_to_dorm_entrance: bool
+    close_to_bath: bool
+    allocated: bool
+    active: bool
+
+class PaginatedBedResponse(BaseModel):
+    count: int
+    results: List[BedResponse]

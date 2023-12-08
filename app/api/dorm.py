@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import uuid
 
-from schema import DormPydanticRead, DormPydanticWrite, DormPydanticUpdate
+from schema import DormPydanticRead, DormPydanticWrite, DormPydanticUpdate, PaginatedDormResponse
 from models import Dorm
 from config.db import get_db
 from deps import is_authenticated
@@ -15,11 +15,11 @@ authorization_token = APIKeyHeader(name='Authorization', scheme_name='Authorizat
 x_client_id = APIKeyHeader(name='X-Client-Id', scheme_name='X-Client-Id')
 
 # Should add a helper method that returns all necessary information
-@router.get("/", response_model=List[DormPydanticRead], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=PaginatedDormResponse, status_code=status.HTTP_200_OK)
 def list_dorms(
     db: Session = Depends(get_db),
-    limit: int = 20,
-    skip: int = 0,
+    page_size: int = Query(20, gt=0, le=100),
+    page: int = Query(1, gt=0),
     active: Optional[bool] = Query(None),
     is_authenticated = Depends(is_authenticated),
     authorization = Security(authorization_token),
@@ -30,12 +30,13 @@ def list_dorms(
 
     # apply filters if any
     dorms = db.query(Dorm).order_by(desc(Dorm.created_at))
+    count = dorms.count()
     if active is not None:
         dorms = dorms.filter(Dorm.active == active)
 
     # apply pagination
-    dorms = dorms.offset(skip).limit(limit).all()
-    return dorms
+    dorms = dorms.slice((page-1)*page_size, page*page_size).all()
+    return {"count": count, "results": dorms}
 
 @router.get("/{dorm_id}/", response_model=DormPydanticRead, status_code=status.HTTP_200_OK)
 def read_dorm(
