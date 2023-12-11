@@ -89,7 +89,7 @@ def update_dorm(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Dorm not found')
     
     for var, value in vars(dorm).items():
-        setattr(existing_dorm, var, value) if value else None
+        setattr(existing_dorm, var, value) if value is not None else None
     
     try:
         db.commit()

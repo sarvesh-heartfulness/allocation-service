@@ -128,7 +128,7 @@ def update_room(
     
     # update room
     for var, value in vars(room).items():
-        setattr(existing_room, var, value) if value else None
+        setattr(existing_room, var, value) if value is not None else None
     
     try:
         db.commit()

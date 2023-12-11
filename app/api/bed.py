@@ -110,3 +110,40 @@ def create_room(
     except Exception as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str('Bed already exists'))
     return db_item
+
+@router.patch("/{bed_id}/", response_model=BedResponse, status_code=status.HTTP_200_OK)
+def update_bed(
+    dorm_id: uuid.UUID,
+    room_id: uuid.UUID,
+    bed_id: uuid.UUID,
+    bed: BedCreate,
+    db: Session = Depends(get_db),
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
+    '''
+    Update a bed
+    '''
+    # check if dorm and room exists
+    dorm = db.query(Dorm).filter(Dorm.id==dorm_id).one_or_none()
+    room = db.query(Room).filter(Room.id==room_id, Room.dorm_id==dorm_id).one_or_none()
+    if dorm is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Dorm not found')
+    if room is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Room not found')
+
+    # get bed
+    existing_bed = db.query(Bed).filter(Bed.id==bed_id, Bed.room_id==room_id).one_or_none()
+    if existing_bed is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
+    
+    # update bed
+    for var, value in vars(bed).items():
+        setattr(existing_bed, var, value) if value is not None else None
+    
+    try:
+        db.commit()
+        db.refresh(existing_bed)
+    except Exception as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return existing_bed
