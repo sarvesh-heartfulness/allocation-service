@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from pydantic._internal._model_construction import ModelMetaclass
-from models import Dorm, Room, Bed
+from models import Allocation, Bed, Dorm, Room
 import uuid
 from datetime import datetime
 from typing import Optional, List
@@ -128,3 +128,30 @@ class BedResponse(ReadOnly):
 class PaginatedBedResponse(BaseModel):
     count: int
     results: List[BedResponse]
+
+class AllocationCreate(BaseModel):
+    bed_id: uuid.UUID
+    reg: str = Field(None, title="Registration ID", description="Registration ID")
+    partner: int = Field(None, title="Partner ID", description="Partner ID")
+    name: str = Field(None, title="Name", description="Name of the participant")
+    receipt: str = Field(None, title="Receipt", description="Receipt")
+    amount_paid: float = Field(None, title="Amount Paid", description="Amount Paid")
+    checkin_date: datetime = Field(None, title="Checkin Date", description="Checkin Date")
+    checkout_date: datetime = Field(None, title="Checkout Date", description="Checkout Date")
+
+class AllocationResponse(ReadOnly):
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    bed_id: uuid.UUID
+    reg: str
+    partner: int
+    name: str
+    receipt: str
+    amount_paid: float
+    checkin_date: datetime
+    checkout_date: datetime
+
+class PaginatedAllocationResponse(BaseModel):
+    count: int
+    results: List[AllocationResponse]

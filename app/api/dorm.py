@@ -30,9 +30,9 @@ def list_dorms(
 
     # apply filters if any
     dorms = db.query(Dorm).order_by(desc(Dorm.created_at))
-    count = dorms.count()
     if active is not None:
         dorms = dorms.filter(Dorm.active == active)
+    count = dorms.count()
 
     # apply pagination
     dorms = dorms.slice((page-1)*page_size, page*page_size).all()

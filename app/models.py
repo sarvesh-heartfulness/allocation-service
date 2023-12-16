@@ -1,5 +1,5 @@
 from enum import Enum
-from sqlalchemy import Boolean, Column, event, ForeignKey, Integer, JSON, String, VARCHAR, Text, DateTime
+from sqlalchemy import Boolean, Column, event, Float, ForeignKey, Integer, JSON, String, VARCHAR, Text, DateTime
 from sqlalchemy import types
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -117,3 +117,19 @@ class Bed(BaseModel):
 
     # relationships
     room = relationship("Room", back_populates="beds")
+
+class Allocation(BaseModel):
+    __tablename__ = "allocation"
+
+    id = Column(UUID(as_uuid=True), default=uuid.uuid4, primary_key=True, index=True)
+    bed_id = Column(UUID, ForeignKey(Bed.id), nullable=False)
+    reg = Column(String, nullable=True, index=True)
+    partner = Column(Integer, nullable=True, index=True)
+    name = Column(String, nullable=True)
+    receipt = Column(String, nullable=True)
+    amount_paid = Column(Float, nullable=True)
+    checkin_date = Column(DateTime, nullable=True)
+    checkout_date = Column(DateTime, nullable=True)
+
+    # relationships
+    bed = relationship("Bed", back_populates="allocations")

@@ -6,7 +6,7 @@ from sqlalchemy import func, desc
 import uuid
 
 from schema import BedCreate, BedResponse, PaginatedBedResponse
-from models import Bed, Dorm, Room
+from models import Allocation, Bed, Dorm, Room
 from config.db import get_db
 from deps import is_authenticated
 
@@ -38,11 +38,11 @@ def list_beds(
 
     # get all beds for the room in the dorm
     beds = db.query(Bed).filter(Bed.room_id==room_id).order_by(desc(Bed.created_at))
-    count = beds.count()
     
     # apply filters if any
     if active is not None:
         beds = beds.filter(Bed.active == active)
+    count = beds.count()
     
     # apply pagination
     beds = beds.slice((page-1)*page_size, page*page_size).all()

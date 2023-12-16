@@ -34,11 +34,11 @@ def list_rooms_for_a_dorm(
 
     # get all rooms for this dorm
     rooms = db.query(Room).filter(Room.dorm_id==dorm_id).order_by(desc(Room.created_at))
-    count = rooms.count()
     
     # apply filters if any
     if active is not None:
         rooms = rooms.filter(Room.active == active)
+    count = rooms.count()
     
     # apply pagination
     rooms = rooms.slice((page-1)*page_size, page*page_size).all()
