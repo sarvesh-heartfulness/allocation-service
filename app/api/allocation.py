@@ -128,9 +128,39 @@ def update_allocation(
     return existing_allocation
 
 @router.post("/bulk-allocate/", status_code=status.HTTP_200_OK)
-def bulk_allocate(db: Session = Depends(get_db)):
+def bulk_allocate(
+    db: Session = Depends(get_db),
+    allocations: list[AllocationCreate] = None,
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
     '''
     Bulk allocate beds
     '''
-    # get all beds
-    return {"message": "Beds allocated successfully!"}
+    # check if allocations are provided
+    if not allocations:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No allocations provided')
+
+    # validate allocations
+    for allocation in allocations:
+        bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
+        if bed is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
+        if not bed.active or bed.blocked or bed.allocated:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f'Bed {bed.name} cannot be allocated')
+    
+    # allocate beds
+    for allocation in allocations:
+        db_item = Allocation(**allocation.model_dump())
+        db.add(db_item)
+        db.commit()
+        db.refresh(db_item)
+    
+    # update beds
+    for allocation in allocations:
+        bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
+        bed.allocated = True
+        db.commit()
+        db.refresh(bed)
+    
+    return {"message": f'{len(allocations)} beds allocated successfully'}
