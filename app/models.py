@@ -16,15 +16,6 @@ class BaseModel(Base):
 class Dorm(BaseModel):
     __tablename__ = "dorm"
 
-    class DORM_TYPES(str, Enum):
-        EAST_BUNK_BED = 'east_bunk_bed'
-        NORTH_GROUND_FLOOR_WOODEN_BED = 'north_ground_floor_wooden_bed'
-        SOUTH_BUNK_BED = 'south_bunk_bed'
-
-        @classmethod
-        def choices(cls):
-            return [(key.value, key.name) for key in cls]
-
     class AMOUNT_FOR_TYPES(str, Enum):
         EVENT = 'event'
         DAY = 'day'
@@ -35,7 +26,6 @@ class Dorm(BaseModel):
 
     id = Column(UUID(as_uuid=True), default=uuid.uuid4, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True, unique=True)
-    type = Column(types.Enum(*[i[0] for i in DORM_TYPES.choices()], name="type"), nullable=False)
     description = Column(Text, nullable=True)
     amount = Column(Integer, nullable=False)
     amount_for = Column(types.Enum(*[i[0] for i in AMOUNT_FOR_TYPES.choices()], name="amount_type"), nullable=False)
@@ -48,8 +38,10 @@ class Room(BaseModel):
     __tablename__ = "room"
 
     class FLOORS(str, Enum):
-        GF = 'gf'
-        FF = 'ff'
+        GF = 'gf' # ground floor
+        FF = 'ff' # first floor
+        SF = 'sf' # second floor
+        TF = 'tf' # third floor
 
         @classmethod
         def choices(cls):
@@ -84,7 +76,6 @@ class Room(BaseModel):
     percent_released = Column(Integer)
     bed_type = Column(types.Enum(*[i[0] for i in BED_TYPES.choices()], name="bed_type"), nullable=False)
     is_multibatch = Column(Boolean, default=False)
-    max_count = Column(Integer, default=0)
     participant_type = Column(types.Enum(*[i[0] for i in PARTICIPANT_TYPES.choices()], name="participant_type"), nullable=False)
     reset_allowed = Column(Boolean, default=False)
     active = Column(Boolean, default=True)
@@ -105,7 +96,6 @@ class Bed(BaseModel):
             return [(key.value, key.name) for key in cls]
         
     id = Column(UUID(as_uuid=True), default=uuid.uuid4, primary_key=True, index=True)
-    name = Column(String, nullable=False, index=True)
     room_id = Column(UUID, ForeignKey(Room.id), nullable=False)
     number = Column(Integer)
     blocked = Column(Boolean, default=False)

@@ -26,7 +26,6 @@ class DormPydanticRead(BasePydantic):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     name: str
-    type: Dorm.DORM_TYPES
     description: str | None
     amount: int
     amount_for: Dorm.AMOUNT_FOR_TYPES
@@ -34,7 +33,6 @@ class DormPydanticRead(BasePydantic):
 
 class DormPydanticWrite(BasePydantic):
     name: str
-    type: Dorm.DORM_TYPES
     description: str = Field('', title="Description", description="Description of the dorm")
     amount: int
     amount_for: Dorm.AMOUNT_FOR_TYPES
@@ -73,7 +71,6 @@ class RoomCreate(BaseModel):
     percent_released: int = Field(None, title="Percent Released", description="Percent Released")
     bed_type: Room.BED_TYPES = Field(..., title="Bed Type", description="Bed Type")
     is_multibatch: bool = Field(False, title="Is Multibatch", description="Is Multibatch")
-    max_count: int = Field(0, title="Max Count", description="Max Count")
     participant_type: Room.PARTICIPANT_TYPES = Field(..., title="Participant Type", description="Participant Type")
     reset_allowed: bool = Field(False, title="Reset Allowed", description="Reset Allowed")
     active: bool = Field(True, title="Active", description="Active")
@@ -92,7 +89,6 @@ class RoomResponse(ReadOnly):
     percent_released: int
     bed_type: Room.BED_TYPES
     is_multibatch: bool
-    max_count: int
     participant_type: Room.PARTICIPANT_TYPES
     reset_allowed: bool
     active: bool
@@ -102,7 +98,6 @@ class PaginatedRoomResponse(BaseModel):
     results: List[RoomResponse]
 
 class BedCreate(BaseModel):
-    name: str = Field(..., title="Bed Name", description="Name of the bed")
     number: int = Field(0, title="Number", description="Number")
     blocked: bool = Field(False, title="Blocked", description="Blocked")
     level: Bed.LEVELS = Field(..., title="Level", description="Level")
@@ -116,7 +111,6 @@ class BedResponse(ReadOnly):
     created_at: datetime
     updated_at: datetime
     room_id: uuid.UUID
-    name: str
     number: int | None
     blocked: bool
     level: Bed.LEVELS

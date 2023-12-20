@@ -6,7 +6,7 @@ from sqlalchemy import func, desc
 import uuid
 
 from schema import BedCreate, BedResponse, PaginatedBedResponse
-from models import Allocation, Bed, Dorm, Room
+from models import Bed, Dorm, Room
 from config.db import get_db
 from deps import is_authenticated
 
@@ -96,7 +96,7 @@ def create_bed(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Room not found')
     
     # check if bed already exists
-    existing_bed = db.query(Bed).filter(Bed.name==bed.name,
+    existing_bed = db.query(Bed).filter(Bed.number==bed.number,
                                         Bed.room_id==room_id).one_or_none()
     if existing_bed is not None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Bed already exists')
