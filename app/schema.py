@@ -131,9 +131,11 @@ class PaginatedBedResponse(BaseModel):
 
 class AllocationCreate(BaseModel):
     bed_id: uuid.UUID
+    pnr: str = Field(None, title="PNR", description="PNR")
     reg: str = Field(None, title="Registration ID", description="Registration ID")
     partner: int = Field(None, title="Partner ID", description="Partner ID")
     name: str = Field(None, title="Name", description="Name of the participant")
+    is_soft_allocation: bool = Field(False, title="Is Soft Allocation", description="Is Soft Allocation")
     receipt: str = Field(None, title="Receipt", description="Receipt")
     amount_paid: float = Field(None, title="Amount Paid", description="Amount Paid")
     checkin_date: datetime = Field(None, title="Checkin Date", description="Checkin Date")
@@ -141,17 +143,33 @@ class AllocationCreate(BaseModel):
 
 class AllocationResponse(ReadOnly):
     id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None
+    updated_at: datetime | None
     bed_id: uuid.UUID
-    reg: str
-    partner: int
-    name: str
-    receipt: str
-    amount_paid: float
-    checkin_date: datetime
-    checkout_date: datetime
+    pnr: str | None
+    reg: str | None
+    partner: int | None
+    name: str | None
+    is_soft_allocation: bool
+    receipt: str | None
+    amount_paid: float | None
+    checkin_date: datetime | None
+    checkout_date: datetime | None
 
 class PaginatedAllocationResponse(BaseModel):
     count: int
     results: List[AllocationResponse]
+
+class SoftAllocationRequest(BaseModel):
+    bed_id: uuid.UUID
+    pnr: str = Field(..., title="PNR", description="PNR")
+    reg: str = Field(..., title="Registration ID", description="Registration ID")
+    partner: int = Field(None, title="Partner ID", description="Partner ID")
+    name: str = Field(None, title="Name", description="Name of the participant")
+    receipt: str = Field(None, title="Receipt", description="Receipt")
+    amount_paid: float = Field(None, title="Amount Paid", description="Amount Paid")
+    checkin_date: datetime = Field(None, title="Checkin Date", description="Checkin Date")
+    checkout_date: datetime = Field(None, title="Checkout Date", description="Checkout Date")
+
+class ConfirmAllocationRequest(BaseModel):
+    pnr: str

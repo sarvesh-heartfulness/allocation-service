@@ -117,15 +117,18 @@ class Bed(BaseModel):
 
     # relationships
     room = relationship("Room", back_populates="beds")
+    allocations = relationship("Allocation", back_populates="bed")
 
 class Allocation(BaseModel):
     __tablename__ = "allocation"
 
     id = Column(UUID(as_uuid=True), default=uuid.uuid4, primary_key=True, index=True)
     bed_id = Column(UUID, ForeignKey(Bed.id), nullable=False)
+    pnr = Column(String, nullable=True, index=True)
     reg = Column(String, nullable=True, index=True)
     partner = Column(Integer, nullable=True, index=True)
     name = Column(String, nullable=True)
+    is_soft_allocation = Column(Boolean, default=False)
     receipt = Column(String, nullable=True)
     amount_paid = Column(Float, nullable=True)
     checkin_date = Column(DateTime, nullable=True)

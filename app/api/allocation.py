@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import uuid
 
-from schema import AllocationCreate, AllocationResponse, PaginatedAllocationResponse
+from schema import AllocationCreate, AllocationResponse, PaginatedAllocationResponse, \
+    SoftAllocationRequest, ConfirmAllocationRequest
 from models import Allocation, Bed
 from config.db import get_db
 from deps import is_authenticated
@@ -20,16 +21,16 @@ def list_allocations(
     page_size: int = Query(20, gt=0, le=100),
     page: int = Query(1, gt=0),
     bed_id: Optional[str] = Query(None),
-    reg: Optional[str] = Query(None),
-    partner: Optional[int] = Query(None),
+    pnr: Optional[str] = Query(None),
+    is_soft_allocation: Optional[bool] = Query(None),
     is_authenticated = Depends(is_authenticated),
     authorization = Security(authorization_token),
     x_client_id = Security(x_client_id)):
     '''
     List all the allocations
     '''
-    # check for filters
-    bed, reg, partner = None, None, None
+    # get bed from bed_id
+    bed = None
     if bed_id is not None:
         bed = db.query(Bed).filter(Bed.id==bed_id).one_or_none()
 
@@ -39,59 +40,15 @@ def list_allocations(
     # apply filters if any
     if bed is not None:
         allocations = allocations.filter(Allocation.bed_id == bed_id)
-    if reg is not None:
-        allocations = allocations.filter(Allocation.reg_id == reg)
-    if partner is not None:
-        allocations = allocations.filter(Allocation.partner == partner)
+    if pnr is not None:
+        allocations = allocations.filter(Allocation.pnr == pnr)
+    if is_soft_allocation is not None:
+        allocations = allocations.filter(Allocation.is_soft_allocation == is_soft_allocation)
     count = allocations.count()
     
     # apply pagination
     allocations = allocations.slice((page-1)*page_size, page*page_size).all()
     return {"count": count, "results": allocations}
-
-@router.get("/{allocation_id}/", response_model=AllocationResponse, status_code=status.HTTP_200_OK)
-def read_allocation(
-    allocation_id: str,
-    db: Session = Depends(get_db),
-    is_authenticated = Depends(is_authenticated),
-    authorization = Security(authorization_token),
-    x_client_id = Security(x_client_id)
-    ):
-    '''
-    Get an allocation by id
-    '''
-    # get an allocation
-    allocation = db.query(Allocation).filter(Allocation.id==allocation_id).one_or_none()
-    if allocation is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Allocation not found')
-    return allocation
-
-@router.post("/", response_model=AllocationResponse, status_code=status.HTTP_201_CREATED)
-def create_allocation(
-    allocation: AllocationCreate,
-    db: Session = Depends(get_db),
-    is_authenticated = Depends(is_authenticated),
-    authorization = Security(authorization_token),
-    x_client_id = Security(x_client_id)):
-    '''
-    Create an allocation for a bed
-    '''
-    # check if bed can be allocated
-    bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
-    if bed is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
-    if not bed.active or bed.allocated or bed.blocked:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Bed cannot be allocated')
-    
-    # create allocation
-    try:
-        db_item = Allocation(**allocation.model_dump())
-        db.add(db_item)
-        db.commit()
-        db.refresh(db_item)
-    except Exception as e:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return db_item
 
 @router.patch("/{allocation_id}/", response_model=AllocationResponse, status_code=status.HTTP_200_OK)
 def update_allocation(
@@ -109,15 +66,13 @@ def update_allocation(
     if existing_allocation is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Allocation not found')
     
-    # check if bed can be allocated
+    # check if bed is valid
     bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
     if bed is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
-    if not bed.active or bed.blocked or (bed.allocated and bed.id != existing_allocation.bed_id):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Bed cannot be allocated')
 
     # update allocation
-    for var, value in vars(bed).items():
+    for var, value in vars(allocation).items():
         setattr(existing_allocation, var, value) if value is not None else None
     
     try:
@@ -127,15 +82,15 @@ def update_allocation(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
     return existing_allocation
 
-@router.post("/bulk-allocate/", status_code=status.HTTP_200_OK)
-def bulk_allocate(
+@router.post("/soft-allocate/", status_code=status.HTTP_200_OK)
+def soft_allocate(
     db: Session = Depends(get_db),
-    allocations: list[AllocationCreate] = None,
+    allocations: list[SoftAllocationRequest] = None,
     is_authenticated = Depends(is_authenticated),
     authorization = Security(authorization_token),
     x_client_id = Security(x_client_id)):
     '''
-    Bulk allocate beds
+    Soft allocate beds
     '''
     # check if allocations are provided
     if not allocations:
@@ -149,18 +104,56 @@ def bulk_allocate(
         if not bed.active or bed.blocked or bed.allocated:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f'Bed {bed.name} cannot be allocated')
     
-    # allocate beds
+    # soft allocate beds
     for allocation in allocations:
-        db_item = Allocation(**allocation.model_dump())
+        db_item = Allocation(**allocation.model_dump(), is_soft_allocation=True)
         db.add(db_item)
         db.commit()
         db.refresh(db_item)
     
-    # update beds
+    # block the soft allocated beds
     for allocation in allocations:
         bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
-        bed.allocated = True
+        bed.blocked = True
         db.commit()
         db.refresh(bed)
     
-    return {"message": f'{len(allocations)} beds allocated successfully'}
+    return {"message": f'Soft locked {len(allocations)} beds successfully'}
+
+
+@router.post("/confirm-soft-allocation/", status_code=status.HTTP_200_OK)
+def confirm_soft_allocation(
+    db: Session = Depends(get_db),
+    request_data: ConfirmAllocationRequest = None,
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
+    '''
+    Confirm soft allocated beds
+    '''
+    # get pnr from request
+    if request_data is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No request data provided')
+    pnr = request_data.pnr
+
+    # check if pnr has soft allocated beds
+    allocations = db.query(Allocation).filter(Allocation.pnr==pnr, \
+                                              Allocation.is_soft_allocation==True).all()
+    if not allocations:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No soft allocated beds found')
+    
+    # confirm soft allocated beds
+    for allocation in allocations:
+        allocation.is_soft_allocation = False
+        db.commit()
+        db.refresh(allocation)
+
+    for allocation in allocations:
+        allocation.is_soft_allocation = False
+        bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
+        bed.allocated = True
+        bed.blocked = False
+        db.commit()
+        db.refresh(bed)
+
+    return {"message": f'Confirmed {len(allocations)} soft allocated beds successfully'}
