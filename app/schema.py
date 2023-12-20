@@ -27,7 +27,7 @@ class DormPydanticRead(BasePydantic):
     updated_at: Optional[datetime]
     name: str
     type: Dorm.DORM_TYPES
-    description: str = None
+    description: str | None
     amount: int
     amount_for: Dorm.AMOUNT_FOR_TYPES
     active: bool = True
@@ -35,7 +35,7 @@ class DormPydanticRead(BasePydantic):
 class DormPydanticWrite(BasePydantic):
     name: str
     type: Dorm.DORM_TYPES
-    description: str = None
+    description: str = Field('', title="Description", description="Description of the dorm")
     amount: int
     amount_for: Dorm.AMOUNT_FOR_TYPES
     active: bool = True
@@ -103,7 +103,7 @@ class PaginatedRoomResponse(BaseModel):
 
 class BedCreate(BaseModel):
     name: str = Field(..., title="Bed Name", description="Name of the bed")
-    number: int = Field(..., title="Number", description="Number")
+    number: int = Field(0, title="Number", description="Number")
     blocked: bool = Field(False, title="Blocked", description="Blocked")
     level: Bed.LEVELS = Field(..., title="Level", description="Level")
     close_to_dorm_entrance: bool = Field(False, title="Close to Dorm Entrance", description="Close to Dorm Entrance")
@@ -117,7 +117,7 @@ class BedResponse(ReadOnly):
     updated_at: datetime
     room_id: uuid.UUID
     name: str
-    number: int
+    number: int | None
     blocked: bool
     level: Bed.LEVELS
     close_to_dorm_entrance: bool

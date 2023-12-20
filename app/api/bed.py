@@ -19,7 +19,7 @@ def list_beds(
     dorm_id: str,
     room_id: str,
     db: Session = Depends(get_db),
-    page_size: int = Query(20, gt=0, le=100),
+    page_size: int = Query(20, gt=0, le=200),
     page: int = Query(1, gt=0),
     active: Optional[bool] = Query(None),
     is_authenticated = Depends(is_authenticated),
@@ -76,7 +76,7 @@ def read_bed(
     return bed
 
 @router.post("/", response_model=BedResponse, status_code=status.HTTP_201_CREATED)
-def create_room(
+def create_bed(
     dorm_id: uuid.UUID,
     room_id: uuid.UUID,
     bed: BedCreate,
