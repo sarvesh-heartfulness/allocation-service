@@ -46,6 +46,10 @@ def list_beds(
     
     # apply pagination
     beds = beds.slice((page-1)*page_size, page*page_size).all()
+
+    # get the latest allocation for each bed
+    for bed in beds:
+        bed.allocations = [bed.allocations[-1]] if bed.allocations else []
     return {"count": count, "results": beds}
 
 @router.get("/{bed_id}/", response_model=BedResponse, status_code=status.HTTP_200_OK)
@@ -73,6 +77,9 @@ def read_bed(
     bed = db.query(Bed).filter(Bed.id==bed_id, Bed.room_id==room_id).one_or_none()
     if bed is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
+
+    # get the latest allocation
+    bed.allocations = [bed.allocations[-1]] if bed.allocations else []
     return bed
 
 @router.post("/", response_model=BedResponse, status_code=status.HTTP_201_CREATED)

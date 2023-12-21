@@ -102,7 +102,7 @@ def soft_allocate(
         if bed is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
         if not bed.active or bed.blocked or bed.allocated:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f'Bed {bed.name} cannot be allocated')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f'Bed {bed.number} cannot be allocated')
     
     # soft allocate beds
     for allocation in allocations:
@@ -135,12 +135,18 @@ def confirm_soft_allocation(
     if request_data is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No request data provided')
     pnr = request_data.pnr
+    receipt = request_data.receipt
+    amount_paid = request_data.amount_paid
 
     # check if pnr has soft allocated beds
     allocations = db.query(Allocation).filter(Allocation.pnr==pnr, \
                                               Allocation.is_soft_allocation==True).all()
     if not allocations:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No soft allocated beds found')
+    
+    # add receipt and amount paid to first allocation
+    allocations[-1].receipt = receipt
+    allocations[-1].amount_paid = amount_paid
     
     # confirm soft allocated beds
     for allocation in allocations:

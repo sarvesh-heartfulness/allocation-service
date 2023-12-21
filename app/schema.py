@@ -106,6 +106,13 @@ class BedCreate(BaseModel):
     allocated: bool = Field(False, title="Allocated", description="Allocated")
     active: bool = Field(True, title="Active", description="Active")
 
+class BedAllocationResponse(ReadOnly):
+    id: uuid.UUID
+    pnr: str | None
+    reg: str | None
+    name: str | None
+    is_soft_allocation: bool
+
 class BedResponse(ReadOnly):
     id: uuid.UUID
     created_at: datetime
@@ -117,6 +124,7 @@ class BedResponse(ReadOnly):
     close_to_dorm_entrance: bool
     close_to_bath: bool
     allocated: bool
+    allocations: List[BedAllocationResponse]
     active: bool
 
 class PaginatedBedResponse(BaseModel):
@@ -167,3 +175,5 @@ class SoftAllocationRequest(BaseModel):
 
 class ConfirmAllocationRequest(BaseModel):
     pnr: str
+    receipt: str = Field('', title="Receipt", description="Receipt")
+    amount_paid: float = Field(0.0, title="Amount Paid", description="Amount Paid")
