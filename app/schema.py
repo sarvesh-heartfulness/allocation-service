@@ -127,6 +127,21 @@ class BedResponse(ReadOnly):
     allocations: List[BedAllocationResponse]
     active: bool
 
+class AllocatedBedRoomDormResponse(ReadOnly):
+    id: uuid.UUID | None
+    name: str | None
+
+class AllocatedBedRoomResponse(ReadOnly):
+    id: uuid.UUID | None
+    name: str | None
+    room_identifier: int | None
+    dorm: AllocatedBedRoomDormResponse | None
+
+class AllocatedBedResponse(ReadOnly):
+    number: int | None
+    level: Bed.LEVELS
+    room: AllocatedBedRoomResponse
+
 class PaginatedBedResponse(BaseModel):
     count: int
     results: List[BedResponse]
@@ -157,6 +172,7 @@ class AllocationResponse(ReadOnly):
     amount_paid: float | None
     checkin_date: datetime | None
     checkout_date: datetime | None
+    bed: AllocatedBedResponse | None
 
 class PaginatedAllocationResponse(BaseModel):
     count: int
