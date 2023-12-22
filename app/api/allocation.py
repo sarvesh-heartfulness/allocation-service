@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
 from fastapi.security import APIKeyHeader
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 import uuid
 
@@ -23,6 +23,7 @@ def list_allocations(
     bed_id: Optional[str] = Query(None),
     pnr: Optional[str] = Query(None),
     is_soft_allocation: Optional[bool] = Query(None),
+    active: Optional[bool] = Query(None),
     is_authenticated = Depends(is_authenticated),
     authorization = Security(authorization_token),
     x_client_id = Security(x_client_id)):
@@ -44,6 +45,8 @@ def list_allocations(
         allocations = allocations.filter(Allocation.pnr == pnr)
     if is_soft_allocation is not None:
         allocations = allocations.filter(Allocation.is_soft_allocation == is_soft_allocation)
+    if active is not None:
+        allocations = allocations.filter(Allocation.active == active)
     count = allocations.count()
     
     # apply pagination
@@ -96,6 +99,18 @@ def soft_allocate(
     if not allocations:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No allocations provided')
 
+    # deallocate already allocated beds
+    pnrs = {allocation.pnr for allocation in allocations}
+    existing_allocations = db.query(Allocation).filter(Allocation.pnr.in_(list(pnrs)), \
+                                                       Allocation.active==True).all()
+    for existing_allocation in existing_allocations:
+        existing_allocation.active = False
+        bed = db.query(Bed).options(joinedload(Bed.allocations)).filter(Bed.id==existing_allocation.bed_id).one_or_none()
+        if bed:
+            bed.blocked = False
+            bed.allocated = False
+    db.commit()
+
     # validate allocations
     for allocation in allocations:
         bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
@@ -105,18 +120,16 @@ def soft_allocate(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f'Bed {bed.number} cannot be allocated')
     
     # soft allocate beds
-    for allocation in allocations:
-        db_item = Allocation(**allocation.model_dump(), is_soft_allocation=True)
-        db.add(db_item)
-        db.commit()
-        db.refresh(db_item)
+    db_items = [Allocation(**allocation.model_dump(), is_soft_allocation=True) for allocation in allocations]
+    db.add_all(db_items)
+    db.commit()
     
     # block the soft allocated beds
     for allocation in allocations:
         bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
-        bed.blocked = True
-        db.commit()
-        db.refresh(bed)
+        if bed:
+            bed.blocked = True
+    db.commit()
     
     return {"message": f'Soft locked {len(allocations)} beds successfully'}
 
@@ -139,8 +152,9 @@ def confirm_soft_allocation(
     amount_paid = request_data.amount_paid
 
     # check if pnr has soft allocated beds
-    allocations = db.query(Allocation).filter(Allocation.pnr==pnr, \
-                                              Allocation.is_soft_allocation==True).all()
+    allocations = db.query(Allocation).filter(Allocation.pnr==pnr,
+                                              Allocation.is_soft_allocation==True,
+                                              Allocation.active==True).all()
     if not allocations:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No soft allocated beds found')
     
@@ -149,17 +163,14 @@ def confirm_soft_allocation(
     allocations[-1].amount_paid = amount_paid
     
     # confirm soft allocated beds
-    for allocation in allocations:
-        allocation.is_soft_allocation = False
-        db.commit()
-        db.refresh(allocation)
+    allocation_ids = [allocation.id for allocation in allocations]
+    db.query(Allocation).filter(Allocation.id.in_(allocation_ids)).update({Allocation.is_soft_allocation: False})
 
     for allocation in allocations:
-        allocation.is_soft_allocation = False
         bed = db.query(Bed).filter(Bed.id==allocation.bed_id).one_or_none()
-        bed.allocated = True
-        bed.blocked = False
-        db.commit()
-        db.refresh(bed)
+        if bed:
+            bed.allocated = True
+            bed.blocked = False
+    db.commit()
 
     return {"message": f'Confirmed {len(allocations)} soft allocated beds successfully'}

@@ -172,6 +172,7 @@ class AllocationResponse(ReadOnly):
     amount_paid: float | None
     checkin_date: datetime | None
     checkout_date: datetime | None
+    active: bool
     bed: AllocatedBedResponse | None
 
 class PaginatedAllocationResponse(BaseModel):

@@ -49,7 +49,10 @@ def list_beds(
 
     # get the latest allocation for each bed
     for bed in beds:
-        bed.allocations = [bed.allocations[-1]] if bed.allocations else []
+        if bed.allocations and bed.allocations[-1].active:
+            bed.allocations = [bed.allocations[-1]]
+        else:
+            bed.allocations = []
     return {"count": count, "results": beds}
 
 @router.get("/{bed_id}/", response_model=BedResponse, status_code=status.HTTP_200_OK)
@@ -79,7 +82,10 @@ def read_bed(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
 
     # get the latest allocation
-    bed.allocations = [bed.allocations[-1]] if bed.allocations else []
+    if bed.allocations and bed.allocations[-1].active:
+        bed.allocations = [bed.allocations[-1]]
+    else:
+        bed.allocations = []
     return bed
 
 @router.post("/", response_model=BedResponse, status_code=status.HTTP_201_CREATED)

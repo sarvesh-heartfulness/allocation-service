@@ -123,6 +123,7 @@ class Allocation(BaseModel):
     amount_paid = Column(Float, nullable=True)
     checkin_date = Column(DateTime, nullable=True)
     checkout_date = Column(DateTime, nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
 
     # relationships
     bed = relationship("Bed", back_populates="allocations")
