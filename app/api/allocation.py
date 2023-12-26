@@ -100,15 +100,16 @@ def soft_allocate(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No allocations provided')
 
     # deallocate already allocated beds
-    pnrs = {allocation.pnr for allocation in allocations}
-    existing_allocations = db.query(Allocation).filter(Allocation.pnr.in_(list(pnrs)), \
-                                                       Allocation.active==True).all()
-    for existing_allocation in existing_allocations:
-        existing_allocation.active = False
-        bed = db.query(Bed).options(joinedload(Bed.allocations)).filter(Bed.id==existing_allocation.bed_id).one_or_none()
-        if bed:
-            bed.blocked = False
-            bed.allocated = False
+    for allocation in allocations:
+        existing_allocation = db.query(Allocation).filter(Allocation.pnr==allocation.pnr,
+                                                          Allocation.reg==allocation.reg,
+                                                          Allocation.active==True).one_or_none()
+        if existing_allocation:
+            existing_allocation.active = False
+            bed = db.query(Bed).options(joinedload(Bed.allocations)).filter(Bed.id==existing_allocation.bed_id).one_or_none()
+            if bed:
+                bed.blocked = False
+                bed.allocated = False
     db.commit()
 
     # validate allocations
