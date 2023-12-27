@@ -174,4 +174,4 @@ def confirm_soft_allocation(
             bed.blocked = False
     db.commit()
 
-    return {"message": f'Confirmed {len(allocations)} soft allocated beds successfully'}
+    return {"message": f'Confirmed {len(allocations)} beds successfully.'}
