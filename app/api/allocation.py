@@ -6,8 +6,8 @@ from sqlalchemy import desc
 import uuid
 
 from schema import AllocationCreate, AllocationResponse, PaginatedAllocationResponse, \
-    SoftAllocationRequest, ConfirmAllocationRequest
-from models import Allocation, Bed
+    SoftAllocationRequest, ConfirmAllocationRequest, AutoSoftAllocationRequest
+from models import Allocation, Bed, Dorm, Room
 from config.db import get_db
 from deps import is_authenticated
 
@@ -134,6 +134,58 @@ def soft_allocate(
     
     return {"message": f'Soft locked {len(allocations)} beds successfully'}
 
+@router.post("/auto-soft-allocate/", status_code=status.HTTP_200_OK)
+def auto_soft_allocate(
+    db: Session = Depends(get_db),
+    allocations: list[AutoSoftAllocationRequest] = None,
+    is_authenticated = Depends(is_authenticated),
+    authorization = Security(authorization_token),
+    x_client_id = Security(x_client_id)):
+    '''
+    Auto soft allocate beds
+    '''
+    # check if allocations are provided
+    if not allocations:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='No allocations provided')
+    
+    # check for availability of beds
+    beds = db.query(Bed).filter(Bed.room.has(active=True),
+                                Bed.room.has(participant_type=Room.PARTICIPANT_TYPES.GENERAL.value),
+                                Bed.active==True,
+                                Bed.blocked==False,
+                                Bed.allocated==False).all()
+    
+    if len(beds) < len(allocations):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Not enough beds available')
+    
+    # deallocate already allocated beds
+    for allocation in allocations:
+        existing_allocation = db.query(Allocation).filter(Allocation.pnr==allocation.pnr,
+                                                          Allocation.reg==allocation.reg,
+                                                          Allocation.active==True).one_or_none()
+        if existing_allocation:
+            existing_allocation.active = False
+            bed = db.query(Bed).options(joinedload(Bed.allocations)).filter\
+                (Bed.id==existing_allocation.bed_id).one_or_none()
+            if bed:
+                bed.blocked = False
+                bed.allocated = False
+    db.commit()
+
+    # soft allocate beds
+    db_items = [Allocation(**allocation.model_dump(), is_soft_allocation=True, bed_id=bed.id) \
+                for allocation, bed in zip(allocations, beds)]
+    allocation_beds = [bed for allocation, bed in zip(allocations, beds)]
+
+    db.add_all(db_items)
+    db.commit()
+
+    # block the soft allocated beds
+    for bed in allocation_beds:
+        bed.blocked = True
+    db.commit()
+
+    return {"message": f'Soft locked {len(allocations)} beds successfully'}
 
 @router.post("/confirm-soft-allocation/", status_code=status.HTTP_200_OK)
 def confirm_soft_allocation(

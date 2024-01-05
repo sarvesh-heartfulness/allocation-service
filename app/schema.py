@@ -155,8 +155,8 @@ class AllocationCreate(BaseModel):
     is_soft_allocation: bool = Field(False, title="Is Soft Allocation", description="Is Soft Allocation")
     receipt: str = Field(None, title="Receipt", description="Receipt")
     amount_paid: float = Field(None, title="Amount Paid", description="Amount Paid")
-    checkin_date: datetime = Field(None, title="Checkin Date", description="Checkin Date")
-    checkout_date: datetime = Field(None, title="Checkout Date", description="Checkout Date")
+    checkin_date: datetime | None = Field(None, title="Checkin Date", description="Checkin Date")
+    checkout_date: datetime | None = Field(None, title="Checkout Date", description="Checkout Date")
 
 class AllocationResponse(ReadOnly):
     id: uuid.UUID
@@ -187,8 +187,16 @@ class SoftAllocationRequest(BaseModel):
     name: str = Field(None, title="Name", description="Name of the participant")
     receipt: str = Field(None, title="Receipt", description="Receipt")
     amount_paid: float = Field(None, title="Amount Paid", description="Amount Paid")
-    checkin_date: datetime = Field(None, title="Checkin Date", description="Checkin Date")
-    checkout_date: datetime = Field(None, title="Checkout Date", description="Checkout Date")
+    checkin_date: datetime | None = Field(None, title="Checkin Date", description="Checkin Date")
+    checkout_date: datetime | None = Field(None, title="Checkout Date", description="Checkout Date")
+
+class AutoSoftAllocationRequest(BaseModel):
+    pnr: str = Field(..., title="PNR", description="PNR")
+    reg: str = Field(..., title="Registration ID", description="Registration ID")
+    partner: int = Field(None, title="Partner ID", description="Partner ID")
+    name: str = Field(None, title="Name", description="Name of the participant")
+    checkin_date: datetime | None = Field(None, title="Checkin Date", description="Checkin Date")
+    checkout_date: datetime | None = Field(None, title="Checkout Date", description="Checkout Date")
 
 class ConfirmAllocationRequest(BaseModel):
     pnr: str
