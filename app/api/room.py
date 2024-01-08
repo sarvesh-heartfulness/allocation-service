@@ -20,6 +20,7 @@ def list_rooms_for_a_dorm(
     db: Session = Depends(get_db),
     page_size: int = Query(20, gt=0, le=100),
     page: int = Query(1, gt=0),
+    is_multibatch: Optional[bool] = Query(None),
     active: Optional[bool] = Query(None),
     is_authenticated = Depends(is_authenticated),
     authorization = Security(authorization_token),
@@ -36,6 +37,8 @@ def list_rooms_for_a_dorm(
     rooms = db.query(Room).filter(Room.dorm_id==dorm_id).order_by(desc(Room.created_at))
     
     # apply filters if any
+    if is_multibatch is not None:
+        rooms = rooms.filter(Room.is_multibatch == is_multibatch)
     if active is not None:
         rooms = rooms.filter(Room.active == active)
     count = rooms.count()
