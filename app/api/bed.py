@@ -21,6 +21,7 @@ def list_beds(
     db: Session = Depends(get_db),
     page_size: int = Query(20, gt=0, le=200),
     page: int = Query(1, gt=0),
+    only_released: Optional[bool] = Query(None),
     active: Optional[bool] = Query(None),
     is_authenticated = Depends(is_authenticated),
     authorization = Security(authorization_token),
@@ -42,6 +43,12 @@ def list_beds(
     # apply filters if any
     if active is not None:
         beds = beds.filter(Bed.active == active)
+    
+    if only_released and room.percent_released:
+        # limit the beds as per release percentage 
+        beds = beds.filter(Bed.active == True)
+        beds_to_fetch = int(beds.count() * room.percent_released / 100)
+        beds = beds.limit(beds_to_fetch)
     count = beds.count()
     
     # apply pagination
