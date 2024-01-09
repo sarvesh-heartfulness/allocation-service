@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
 from fastapi.security import APIKeyHeader
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, asc
 import uuid
 
 from schema import BedCreate, BedResponse, PaginatedBedResponse
@@ -36,9 +36,17 @@ def list_beds(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Dorm not found')
     if room is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Room not found')
+    
+    # check for release percentage
+    if only_released and room.percent_released == 0:
+        return {"count": 0, "results": []}
 
     # get all beds for the room in the dorm
-    beds = db.query(Bed).filter(Bed.room_id==room_id).order_by(desc(Bed.created_at))
+    beds = db.query(Bed).filter(Bed.room_id==room_id)
+    if only_released:
+        beds = beds.order_by(asc(Bed.number))
+    else:
+        beds = beds.order_by(desc(Bed.created_at))
     
     # apply filters if any
     if active is not None:
@@ -51,8 +59,9 @@ def list_beds(
         beds = beds.limit(beds_to_fetch)
     count = beds.count()
     
-    # apply pagination
-    beds = beds.slice((page-1)*page_size, page*page_size).all()
+    # apply pagination if not limited by release percentage
+    if not only_released:
+        beds = beds.slice((page-1)*page_size, page*page_size).all()
 
     # get the latest allocation for each bed
     for bed in beds:
@@ -156,6 +165,12 @@ def update_bed(
     existing_bed = db.query(Bed).filter(Bed.id==bed_id, Bed.room_id==room_id).one_or_none()
     if existing_bed is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
+    
+    # duplicate bed check
+    dup_bed = db.query(Bed).filter(Bed.number==bed.number,
+                                   Bed.room_id==room_id).one_or_none()
+    if dup_bed is not None and dup_bed.id != bed_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Bed already exists')
     
     # update bed
     for var, value in vars(bed).items():

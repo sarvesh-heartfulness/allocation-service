@@ -119,6 +119,8 @@ def soft_allocate(
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail='Bed not found')
         if not bed.active or bed.blocked or bed.allocated:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f'Bed {bed.number} cannot be allocated')
+        if not allocation.checkin_date or not allocation.checkout_date:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Arrival and departure dates are required')
     
     # soft allocate beds
     db_items = [Allocation(**allocation.model_dump(), is_soft_allocation=True) for allocation in allocations]
